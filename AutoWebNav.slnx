@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AutoWebNav/AutoWebNav.csproj" />
+  <Project Path="AutoWebNav.WebView2/AutoWebNav.WebView2.csproj" />
+  <Project Path="AutoWebNav.Tests/AutoWebNav.Tests.csproj" />
+</Solution>
