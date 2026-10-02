@@ -36,6 +36,16 @@ public static class ToolkitScripts
     public static string FramesJs { get; } = Load("frames.js");
 
     /// <summary>
+    /// Captures clicks/input/change/Enter as self-healing fingerprinted events, for Spectator Mode
+    /// (<see cref="RecordingBuilder"/>). Installed as its OWN
+    /// <c>AddScriptToExecuteOnDocumentCreatedAsync</c> call, after <see cref="DocumentStartJs"/> —
+    /// it calls <c>window.__automataFingerprint</c> and <c>window.__automataPickSet/Field</c>,
+    /// which that bundle must already have defined. Dormant until a host calls
+    /// <c>window.__automataRecorder.enable()</c>.
+    /// </summary>
+    public static string RecorderJs { get; } = Load("recorder.js");
+
+    /// <summary>
     /// The bundle a host installs at document-creation time, in every frame.
     /// <para>
     /// Two of these have to be there before the page runs, and for different reasons.
