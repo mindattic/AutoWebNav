@@ -2,7 +2,7 @@
 
 Shared .NET 10 browser-automation layer for WebView2 apps: hard timeouts, trusted CDP input, dialog-free file upload and a self-healing element resolver that keeps finding controls after a site redesign.
 
-![C#](https://img.shields.io/badge/language-C%23-239120) ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4) ![WebView2](https://img.shields.io/badge/host-WebView2-0078D4) ![Version 2.0.0](https://img.shields.io/badge/version-2.0.0-blue) ![License MIT](https://img.shields.io/badge/license-MIT-green)
+![C#](https://img.shields.io/badge/language-C%23-239120) ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4) ![WebView2](https://img.shields.io/badge/host-WebView2-0078D4) ![Version 3.0.0](https://img.shields.io/badge/version-3.0.0-blue) ![License MIT](https://img.shields.io/badge/license-MIT-green)
 
 ```text
   your app (Automata, KdpPublish, JobHunt ...)
@@ -75,6 +75,47 @@ The first strategy with exactly one visible match wins. When none is unique, can
 - `RecordingBuilder.Build(events)` coalesces the raw stream into a readable step list: keystroke bursts become one typed value, focus-clicks before typing vanish, checkbox toggles collapse to the final state, dropdown-opening clicks fold into the option picked, and submit-looking clicks are flagged as commit points. It is safe to re-run after every event, so a live preview matches the final result.
 - `RecordingExport` saves and loads a recording as one portable `*.autowebnav-recording.json` file (format `autowebnav-recording`, version 1), independent of any one app's data model.
 - `KnownFolders.Downloads` returns the account's real Downloads folder, honouring a relocation made in Windows Settings, as the natural place to drop a recording.
+- `SessionRecording` is Spectator Mode that is always on. Attach it to each pane when the pane is created; from then on every click, typed value (passwords masked), selection, upload and navigation in it — by the person or by the app's own automation — is saved to Downloads as `<App>-session-<yyyyMMdd-HHmmss>.autowebnav-recording.json`. The file is rewritten every 30 seconds while something new happened and a final time when the app's window closes, so there is always a most-recent record of what went on. It runs independently of an explicit `RecorderSession` arm (Automata's ● Record): the page recorder captures while either is on, and neither turns the other off.
+
+### Live Observation
+
+Every AutoWebNav host app is observable while it runs — by a person, a script, or an AI agent the person is talking to about what the app is doing.
+
+- `LiveObservation` (one per app) opens a local Chrome DevTools Protocol port for each WebView2 browser process and registers the instance — app name, PID, one port per pane — in `%LocalAppData%\MindAttic\AutoWebNav\instances\<App>-<PID>.json`, removed on close and pruned by PID after a crash. `WindowTitle` gives the house title, `"<App> - PID: <n>"`. Each pane's port is its preferred one unless `AWN_<APP>_<PANE>_CDP_PORT` overrides it, falling back to a free port when taken; the registry always records the real one.
+- A page in a pane may define `window.__awnObserve = () => ({ running, summary, log: [...] })`. A host's own control panel does, so an observer reports the app's view of itself — is it running, what is it on, its log — not a guess from the DOM.
+- `tools/awn-observe.mjs` is the one observer for every app. No dependencies (Node 22+):
+
+  ```text
+  node tools/awn-observe.mjs list                         every running AutoWebNav app, its PID and panes
+  node tools/awn-observe.mjs status [app] [--pane p]      each pane: URL, the app's own state and log tail,
+                                                          or a page summary (banners, buttons, unticked boxes)
+  node tools/awn-observe.mjs log    [app] [--tail 40]     the app's own log
+  node tools/awn-observe.mjs watch  [app]                 one line per event (NAV, STATE, SUMMARY, LOG, BANNER,
+                                                          UP/GONE) — follows the app across restarts
+  node tools/awn-observe.mjs shot   [app] [--pane p]      PNG screenshot of a pane
+  node tools/awn-observe.mjs dom    [app] --pane p [--selector css]
+  node tools/awn-observe.mjs eval   [app] --pane p --expr "document.title"
+  ```
+
+  `app` is a name substring or a PID, optional when one app is running. Ports (preferred): JobHunt 9366/9367, KdpPublish 9368/9369, Automata 9370/9371.
+
+The ports are unauthenticated and bound to 127.0.0.1, open for as long as the app runs. `eval` runs whatever it is given; everything else only reads.
+
+Adopting both in a host app:
+
+```csharp
+private readonly LiveObservation observation = new("MyApp");
+private readonly SessionRecording sessionRecording = new("MyApp");
+
+Title = observation.WindowTitle;
+Closed += (_, _) => { sessionRecording.Dispose(); observation.Dispose(); };
+
+var env = await CoreWebView2Environment.CreateAsync(userDataFolder: folder,
+    options: observation.OptionsFor("board", preferredPort: 9372));
+await view.EnsureCoreWebView2Async(env);
+// installToolkit: false when a WebView2BrowserSurface (default) already installed the toolkit.
+await sessionRecording.AttachAsync("board", view.CoreWebView2, installToolkit: false);
+```
 
 ## Quick start
 
@@ -88,10 +129,10 @@ cd AutoWebNav
 powershell -ExecutionPolicy Bypass -File tools\pack.ps1
 ```
 
-The script runs the tests first and packs only if they pass, writing `AutoWebNav.2.0.0.nupkg` and `AutoWebNav.WebView2.2.0.0.nupkg` to `C:\LocalNuGet`. Then reference them from your app:
+The script runs the tests first and packs only if they pass, writing `AutoWebNav.3.0.0.nupkg` and `AutoWebNav.WebView2.3.0.0.nupkg` to `C:\LocalNuGet`. Then reference them from your app:
 
 ```xml
-<PackageReference Include="AutoWebNav.WebView2" Version="2.0.0" />
+<PackageReference Include="AutoWebNav.WebView2" Version="3.0.0" />
 ```
 
 ## Usage

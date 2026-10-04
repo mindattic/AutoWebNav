@@ -22,6 +22,12 @@
     if (window.__automataRecorder) return;
 
     var enabled = false;
+
+    // Session Recording (AutoWebNav.WebView2.SessionRecording) sets window.__awnSessionRecording on
+    // every document, every frame, so an app always has a record of what happened in this pane —
+    // independent of, and never toggled by, an explicit Spectator/Record arm. Read at event time, not
+    // at load, so the order the two document-start scripts were registered in doesn't matter.
+    function capturing() { return enabled || window.__awnSessionRecording === true; }
     var inFrame = window.top !== window;
 
     function post(payload) {
@@ -124,7 +130,7 @@
 
     function onClick(e) {
         if (onPickClick(e)) return;
-        if (!enabled) return;
+        if (!capturing()) return;
         var el = actionTarget(realTarget(e));
         if (!el || el.nodeType !== 1) return;
         if (el.tagName === 'LABEL') {
@@ -145,7 +151,7 @@
     }
 
     function onInput(e) {
-        if (!enabled) return;
+        if (!capturing()) return;
         var el = realTarget(e);
         if (!el || el.nodeType !== 1 || targetKind(el) !== 'text') return;
         var masked = isMasked(el);
@@ -157,7 +163,7 @@
     }
 
     function onChange(e) {
-        if (!enabled) return;
+        if (!capturing()) return;
         var el = realTarget(e);
         if (!el || el.nodeType !== 1) return;
         var kind = targetKind(el);
@@ -178,7 +184,7 @@
     }
 
     function onKeydown(e) {
-        if (!enabled || e.key !== 'Enter') return;
+        if (!capturing() || e.key !== 'Enter') return;
         var el = realTarget(e);
         if (!el || el.nodeType !== 1 || targetKind(el) !== 'text') return;
         post({ kind: 'key', value: 'Enter', targetKind: 'text', fingerprint: window.__automataFingerprint(el) });
