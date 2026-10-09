@@ -1,3 +1,4 @@
+using MindAttic.Export.Artifacts;
 using Microsoft.Web.WebView2.Core;
 
 namespace AutoWebNav.WebView2;
@@ -28,6 +29,13 @@ public sealed class SessionRecording : IDisposable
 
     private const string SessionFlagJs = "window.__awnSessionRecording = true;";
 
+    // Each flush replaces this session's one file; the name is already exact.
+    private static readonly ArtifactOptions FlushOptions = new()
+    {
+        Existing = ExistingArtifact.Overwrite,
+        SanitizeName = false
+    };
+
     private readonly List<RecorderEvent> events = [];
     private readonly object gate = new();
     private readonly Timer timer;
@@ -53,7 +61,9 @@ public sealed class SessionRecording : IDisposable
         App = app.Trim();
         var dir = outputDirectory ?? KnownFolders.Downloads;
         Directory.CreateDirectory(dir);
-        OutputPath = Path.Combine(dir, $"{App}-session-{startedAt:yyyyMMdd-HHmmss}{RecordingExport.FileExtension}");
+        // <App>-session-<yyyyMMdd-HHmmss>.autowebnav-recording.json
+        OutputPath = Path.Combine(dir, ArtifactNames.Timestamped($"{App}-session", startedAt.DateTime,
+            RecordingExport.FileExtension));
         timer = new Timer(_ => Flush(), null, FlushInterval, FlushInterval);
     }
 
@@ -101,9 +111,11 @@ public sealed class SessionRecording : IDisposable
         {
             var steps = RecordingBuilder.Build(snapshot);
             if (steps.Count == 0) return;
-            var temp = OutputPath + ".tmp";
-            File.WriteAllText(temp, RecordingExport.Export(steps, startedAt));
-            File.Move(temp, OutputPath, overwrite: true);
+            var json = RecordingExport.Export(steps, startedAt);
+            // Rewrite the same session file in place, atomically. Run off the caller's context:
+            // Dispose is called on the UI thread at window close and must not deadlock.
+            Task.Run(() => ArtifactWriter.WriteTextAsync(Path.GetDirectoryName(OutputPath)!,
+                Path.GetFileName(OutputPath), json, FlushOptions)).GetAwaiter().GetResult();
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

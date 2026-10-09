@@ -2,7 +2,7 @@
 
 Shared .NET 10 browser-automation layer for WebView2 apps: hard timeouts, trusted CDP input, dialog-free file upload and a self-healing element resolver that keeps finding controls after a site redesign.
 
-![C#](https://img.shields.io/badge/language-C%23-239120) ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4) ![WebView2](https://img.shields.io/badge/host-WebView2-0078D4) ![Version 3.0.0](https://img.shields.io/badge/version-3.0.0-blue) ![License MIT](https://img.shields.io/badge/license-MIT-green)
+![C#](https://img.shields.io/badge/language-C%23-239120) ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4) ![WebView2](https://img.shields.io/badge/host-WebView2-0078D4) ![Version 4.0.0](https://img.shields.io/badge/version-4.0.0-blue) ![License MIT](https://img.shields.io/badge/license-MIT-green)
 
 ```text
   your app (Automata, KdpPublish, JobHunt ...)
@@ -129,10 +129,10 @@ cd AutoWebNav
 powershell -ExecutionPolicy Bypass -File tools\pack.ps1
 ```
 
-The script runs the tests first and packs only if they pass, writing `AutoWebNav.3.0.0.nupkg` and `AutoWebNav.WebView2.3.0.0.nupkg` to `C:\LocalNuGet`. Then reference them from your app:
+The script runs the tests first and packs only if they pass, writing `AutoWebNav.4.0.0.nupkg` and `AutoWebNav.WebView2.4.0.0.nupkg` to `C:\LocalNuGet`. Then reference them from your app:
 
 ```xml
-<PackageReference Include="AutoWebNav.WebView2" Version="3.0.0" />
+<PackageReference Include="AutoWebNav.WebView2" Version="4.0.0" />
 ```
 
 ## Usage
