@@ -186,4 +186,78 @@ public class BrowserActionsTests
         Assert.That(browser.Calls, Has.One.Matches<(string Method, string Args)>(
             c => c.Method == "InjectFile" && c.Args == @"C:\file.txt -> window.__automataLastResolved"));
     }
+
+    // ---- EvalRoutedAsync frame routing (via ClickResolvedNativelyAsync) --------------------
+
+    [Test]
+    public async Task EvalRoutedAsync_WaitingOnFrames_RePollsUntilRealAnswerArrives()
+    {
+        var browser = new FakeBrowserSurface();
+        browser.EvalResponses.Enqueue(_ => """{ "ok": false, "waitingOnFrames": true }""");
+        browser.EvalResponses.Enqueue(_ => """{ "ok": false, "waitingOnFrames": true }""");
+        browser.EvalResponses.Enqueue(_ => """{ "ok": true, "value": null }""");
+
+        var result = await BrowserActions.ClickResolvedNativelyAsync(browser, CancellationToken.None);
+
+        Assert.That(result.Ok, Is.True);
+        Assert.That(browser.Calls.Count(c => c.Method == "Eval"), Is.EqualTo(3));
+    }
+
+    [Test]
+    public async Task EvalRoutedAsync_NeverAnswers_ClearsPendingSlotAndFailsAtDeadline()
+    {
+        // No value is ever dequeued other than "still waiting", so the 5s deadline in
+        // EvalRoutedAsync is what ends the call. This test runs in real time (~5s).
+        var browser = new FakeBrowserSurface
+        {
+            DefaultEvalResponse = _ => """{ "ok": false, "waitingOnFrames": true }""",
+        };
+
+        var result = await BrowserActions.ClickResolvedNativelyAsync(browser, CancellationToken.None);
+
+        Assert.That(result.Ok, Is.False);
+        Assert.That(result.Error, Is.EqualTo("the frame holding the element never answered"));
+        Assert.That(browser.Calls[^1], Is.EqualTo(
+            ("Eval", "(function(){ window.__automataDeepAct = null; return '{}'; })()")));
+    }
+
+    // ---- SetValueOnResolvedAsync / SelectOptionOnResolvedAsync JSON-escape their value -----
+
+    [Test]
+    public async Task SetValueOnResolvedAsync_ValueWithQuotesAndNewlines_EscapesIntoAValidJsonLiteral()
+    {
+        const string value = "She said \"hi\"\nnew line\ttab";
+        string? capturedScript = null;
+        var browser = new FakeBrowserSurface
+        {
+            DefaultEvalResponse = script =>
+            {
+                capturedScript = script;
+                return """{ "ok": true, "value": "ok" }""";
+            },
+        };
+
+        await BrowserActions.SetValueOnResolvedAsync(browser, value, CancellationToken.None);
+
+        Assert.That(capturedScript, Does.Contain(System.Text.Json.JsonSerializer.Serialize(value)));
+    }
+
+    [Test]
+    public async Task SelectOptionOnResolvedAsync_OptionTextWithQuotesAndNewlines_EscapesIntoAValidJsonLiteral()
+    {
+        const string optionText = "Option \"B\"\nsecond line";
+        string? capturedScript = null;
+        var browser = new FakeBrowserSurface
+        {
+            DefaultEvalResponse = script =>
+            {
+                capturedScript = script;
+                return """{ "ok": true, "value": "Option B" }""";
+            },
+        };
+
+        await BrowserActions.SelectOptionOnResolvedAsync(browser, optionText, CancellationToken.None);
+
+        Assert.That(capturedScript, Does.Contain(System.Text.Json.JsonSerializer.Serialize(optionText)));
+    }
 }
