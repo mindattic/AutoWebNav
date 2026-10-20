@@ -34,3 +34,5 @@ _Nothing recorded yet._
 | AWN-T11 | 2026-10-16 | chore | open | Clean up code and docs: remove dead code, stale comments and outdated or duplicated docs, and simplify where behaviour doesn't change (/simplify); tests stay green | user request 2026-10-16: approved repo sweep |
 | AWN-T12 | 2026-10-16 | docs | open | Bring README.md up to date with the code as it is now (what it is, setup, usage, commands, current state), following codex-standard/README-STYLE.md; README.htm regenerated if the repo has one | user request 2026-10-16: approved repo sweep |
 | AWN-T13 | 2026-10-16 | docs | closed | Update USER_STORIES.md | — |
+| AWN-T14 | 2026-10-19 | chore | open | Convert tracked source files to LF line endings via .gitattributes, per HOUSE-LAW-13 (low priority) | — |
+| AWN-T15 | 2026-10-19 | fix | open | Off-screen WebView2 lanes never redirected target=_blank/window.open() like the interactive app does, so WebView2 spawned default visible popup windows that could steal focus; wire NewWindowRequested in OffscreenWebView2Factory to redirect into the same off-screen surface | — |

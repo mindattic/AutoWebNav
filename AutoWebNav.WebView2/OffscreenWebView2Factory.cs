@@ -108,6 +108,15 @@ public sealed class OffscreenWebView2Factory(string profileRoot) : IBrowserSurfa
             {
                 var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
                 controller = await environment.CreateCoreWebView2ControllerAsync(hwnd);
+                // Any "open in new window" request (target="_blank", window.open(), etc.) redirects
+                // back into this same off-screen surface instead of letting WebView2 spawn its
+                // default standalone popup window — a real, normally-positioned, visible window
+                // that this off-screen host has no control over and that can steal focus.
+                controller.CoreWebView2.NewWindowRequested += (_, args) =>
+                {
+                    args.Handled = true;
+                    controller.CoreWebView2.Navigate(args.Uri);
+                };
                 // A real rectangle, so the page lays out and coordinate-based input has something
                 // to land on.
                 controller.Bounds = new System.Drawing.Rectangle(0, 0, WindowWidth, WindowHeight);
