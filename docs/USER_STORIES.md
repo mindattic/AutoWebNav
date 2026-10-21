@@ -6,7 +6,7 @@ layer: stories
 status: living
 updated: 2026-10-12
 ---
-<!-- GENERATED from MindAttic.Workflow/data/workflow.db by `workflow db render`. Do not edit: this file is rewritten from the database; change stories and tickets with the workflow CLI. -->
+<!-- GENERATED from MindAttic.Tickets/data/Tickets.db by `tickets db render`. Do not edit: this file is rewritten from the database; change stories and tickets with the tickets CLI. -->
 
 # AutoWebNav — User Stories
 > ✅ done (shipped & tested) · 🟡 partial · ⬜ planned. Every ✅ cites the test.
@@ -35,4 +35,5 @@ _Nothing recorded yet._
 | AWN-T12 | 2026-10-16 | docs | open | Bring README.md up to date with the code as it is now (what it is, setup, usage, commands, current state), following codex-standard/README-STYLE.md; README.htm regenerated if the repo has one | user request 2026-10-16: approved repo sweep |
 | AWN-T13 | 2026-10-16 | docs | closed | Update USER_STORIES.md | — |
 | AWN-T14 | 2026-10-19 | chore | open | Convert tracked source files to LF line endings via .gitattributes, per HOUSE-LAW-13 (low priority) | — |
-| AWN-T15 | 2026-10-19 | fix | open | Off-screen WebView2 lanes never redirected target=_blank/window.open() like the interactive app does, so WebView2 spawned default visible popup windows that could steal focus; wire NewWindowRequested in OffscreenWebView2Factory to redirect into the same off-screen surface | — |
+| AWN-T15 | 2026-10-19 | fix | closed | Off-screen WebView2 lanes never redirected target=_blank/window.open() like the interactive app does, so WebView2 spawned default visible popup windows that could steal focus; wire NewWindowRequested in OffscreenWebView2Factory to redirect into the same off-screen surface | 296b774 |
+| AWN-T16 | 2026-10-20 | docs | open | Publish AutoWebNav docs to GitHub Pages via the shared Toolkit DocFX pipeline: run adopt-docs-site.ps1 (README.md as home page, docs/*.md as articles, API reference only where the code builds in CI), enable Pages with build_type=workflow, set the repo homepage URL, retire tools/build-readme.ps1 and README.htm, confirm the docs Actions run is green and https://mindattic.github.io/AutoWebNav/ returns 200. Depends on MAT-T8. | — |
