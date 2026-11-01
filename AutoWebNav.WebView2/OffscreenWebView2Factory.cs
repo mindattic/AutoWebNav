@@ -21,8 +21,15 @@ namespace AutoWebNav.WebView2;
 /// headless run therefore still requires an interactive session — see the runner's task
 /// registration, which uses an interactive token deliberately.
 /// </para>
+/// <para>
+/// <b>Live Observation.</b> Pass the app's own <see cref="LiveObservation"/> instance to make every
+/// lane this factory creates show up as a pane in the shared instance registry, with its own CDP
+/// port — the same mechanism an on-screen host window already uses, so <c>tools/awn-observe.mjs</c>
+/// or any other CDP client can attach to an already-running off-screen lane. Omit it (the default)
+/// to keep today's behaviour: a lane with no CDP port, invisible to external observers.
+/// </para>
 /// </summary>
-public sealed class OffscreenWebView2Factory(string profileRoot) : IBrowserSurfaceFactory
+public sealed class OffscreenWebView2Factory(string profileRoot, LiveObservation? observation = null) : IBrowserSurfaceFactory
 {
     // Far enough off-screen that no plausible monitor arrangement shows it, while still being a
     // real window with real bounds.
@@ -39,7 +46,7 @@ public sealed class OffscreenWebView2Factory(string profileRoot) : IBrowserSurfa
         var userDataFolder = Path.Combine(profileRoot, SafeFolder(profileKey));
         Directory.CreateDirectory(userDataFolder);
 
-        var host = new SessionHost(name, profileKey, userDataFolder);
+        var host = new SessionHost(name, profileKey, userDataFolder, observation);
         await host.StartAsync(ct);
         return host;
     }
@@ -56,7 +63,7 @@ public sealed class OffscreenWebView2Factory(string profileRoot) : IBrowserSurfa
     /// it. Everything WebView2 touches happens on that thread; the surface's own calls are already
     /// async and marshalled by WebView2 itself.
     /// </summary>
-    private sealed class SessionHost(string name, string profileKey, string userDataFolder) : IBrowserSession
+    private sealed class SessionHost(string name, string profileKey, string userDataFolder, LiveObservation? observation) : IBrowserSession
     {
         private readonly TaskCompletionSource<IBrowserSurface> ready =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -106,7 +113,8 @@ public sealed class OffscreenWebView2Factory(string profileRoot) : IBrowserSurfa
         {
             try
             {
-                var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
+                var options = observation?.OptionsFor(name);
+                var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder, options: options);
                 controller = await environment.CreateCoreWebView2ControllerAsync(hwnd);
                 // Any "open in new window" request (target="_blank", window.open(), etc.) redirects
                 // back into this same off-screen surface instead of letting WebView2 spawn its
@@ -138,6 +146,7 @@ public sealed class OffscreenWebView2Factory(string profileRoot) : IBrowserSurfa
             stopping.Cancel();
             if (hwnd != IntPtr.Zero) PostMessage(hwnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
             stopping.Dispose();
+            observation?.Unregister(name);
             return ValueTask.CompletedTask;
         }
 

@@ -80,17 +80,19 @@ public sealed class LiveObservation : IDisposable
     /// variable <c>AWN_&lt;APP&gt;_&lt;PANE&gt;_CDP_PORT</c> overrides it (or, for compatibility,
     /// <paramref name="legacyPortEnvVar"/>), and falls back to a free OS-assigned port when that
     /// one is already taken — the registry always records the port actually used, so an observer
-    /// never has to guess. <paramref name="baseOptions"/>' other browser arguments are kept.
+    /// never has to guess. Omit <paramref name="preferredPort"/> (or pass 0) for a pane with no
+    /// fixed convention — e.g. one of several short-lived off-screen lanes — to take any free port
+    /// directly. <paramref name="baseOptions"/>' other browser arguments are kept.
     /// </summary>
     public CoreWebView2EnvironmentOptions OptionsFor(
-        string pane, int preferredPort, CoreWebView2EnvironmentOptions? baseOptions = null, string? legacyPortEnvVar = null)
+        string pane, int preferredPort = 0, CoreWebView2EnvironmentOptions? baseOptions = null, string? legacyPortEnvVar = null)
     {
         if (string.IsNullOrWhiteSpace(pane)) throw new ArgumentException("A pane name is required.", nameof(pane));
 
         var port = EnvPort($"AWN_{Sanitize(App).ToUpperInvariant()}_{Sanitize(pane).ToUpperInvariant()}_CDP_PORT")
                    ?? (legacyPortEnvVar is null ? null : EnvPort(legacyPortEnvVar))
-                   ?? preferredPort;
-        if (!IsPortFree(port)) port = FreePort();
+                   ?? (preferredPort > 0 ? preferredPort : FreePort());
+        if (preferredPort > 0 && !IsPortFree(port)) port = FreePort();
 
         lock (gate) panes[pane.Trim()] = port;
         Write();
@@ -101,6 +103,17 @@ public sealed class LiveObservation : IDisposable
             ? arg
             : $"{options.AdditionalBrowserArguments} {arg}";
         return options;
+    }
+
+    /// <summary>Removes one pane from the registry, e.g. when a short-lived off-screen lane closes
+    /// while the rest of the app (and its other panes) keeps running. Harmless if never registered.</summary>
+    public void Unregister(string pane)
+    {
+        lock (gate)
+        {
+            if (disposed || !panes.Remove(pane.Trim())) return;
+        }
+        Write();
     }
 
     /// <summary>Removes this instance from the registry. Called when the app's window closes; a

@@ -101,6 +101,8 @@ Every AutoWebNav host app is observable while it runs — by a person, a script,
 
 The ports are unauthenticated and bound to 127.0.0.1, open for as long as the app runs. `eval` runs whatever it is given; everything else only reads.
 
+Off-screen lanes (`OffscreenWebView2Factory`, for headless runs) opt into the same registry: pass the app's `LiveObservation` instance to its constructor and every lane it creates registers itself as a pane (named `browser-<n>`), with its own free CDP port, unregistering again when the lane closes. Omit it to keep a lane invisible to external observers, as before.
+
 Adopting both in a host app:
 
 ```csharp
