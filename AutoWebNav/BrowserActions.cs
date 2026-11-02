@@ -95,6 +95,9 @@ public static class BrowserActions
         {
             using var doc = JsonDocument.Parse(raw);
             var root = doc.RootElement;
+            // A script that threw comes back as JSON null, not an object.
+            if (root.ValueKind != JsonValueKind.Object)
+                return new CheckProbe(false, false, false, 0, 0, "unparseable probe result");
             if (!root.GetProperty("ok").GetBoolean())
                 return new CheckProbe(false, false, false, 0, 0, GetError(root));
             return new CheckProbe(true,
@@ -104,7 +107,7 @@ public static class BrowserActions
                 root.GetProperty("centerY").GetDouble(),
                 null);
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
         {
             return new CheckProbe(false, false, false, 0, 0, "unparseable probe result");
         }
@@ -329,7 +332,8 @@ public static class BrowserActions
         try
         {
             using var doc = JsonDocument.Parse(raw);
-            return doc.RootElement.TryGetProperty("waitingOnFrames", out var w) &&
+            return doc.RootElement.ValueKind == JsonValueKind.Object &&
+                   doc.RootElement.TryGetProperty("waitingOnFrames", out var w) &&
                    w.ValueKind == JsonValueKind.True;
         }
         catch (JsonException)
@@ -344,7 +348,11 @@ public static class BrowserActions
         {
             using var doc = JsonDocument.Parse(raw);
             var root = doc.RootElement;
-            var ok = root.TryGetProperty("ok", out var okEl) && okEl.GetBoolean();
+            // A script that threw (or a page torn down mid-call) comes back as JSON null, and
+            // TryGetProperty on a non-object throws rather than answering false.
+            if (root.ValueKind != JsonValueKind.Object)
+                return new ValueReadback(false, null, "unparseable action result");
+            var ok = root.TryGetProperty("ok", out var okEl) && okEl.ValueKind == JsonValueKind.True;
             var value = root.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
             return new ValueReadback(ok, value, ok ? null : GetError(root));
         }

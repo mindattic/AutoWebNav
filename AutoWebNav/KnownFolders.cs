@@ -28,14 +28,13 @@ public static class KnownFolders
             if (OperatingSystem.IsWindows())
             {
                 var id = DownloadsId;
-                if (SHGetKnownFolderPath(ref id, 0, 0, out var pathPtr) == 0)
+                // The buffer must be freed whether the call succeeds or not (per the Win32 docs).
+                var hr = SHGetKnownFolderPath(ref id, 0, 0, out var pathPtr);
+                try
                 {
-                    try
-                    {
-                        if (Marshal.PtrToStringUni(pathPtr) is { Length: > 0 } path) return path;
-                    }
-                    finally { Marshal.FreeCoTaskMem(pathPtr); }
+                    if (hr == 0 && Marshal.PtrToStringUni(pathPtr) is { Length: > 0 } path) return path;
                 }
+                finally { Marshal.FreeCoTaskMem(pathPtr); }
             }
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
         }

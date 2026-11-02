@@ -21,7 +21,9 @@ public static partial class RecordingBuilder
     public static List<RecordedStep> Build(IReadOnlyList<RecorderEvent> events)
     {
         var steps = new List<RecordedStep>();
-        long lastNavTs = long.MinValue;
+        // Null until the first navigation. A sentinel timestamp would overflow in the subtraction
+        // below and make the very first navigate look like a duplicate when its URL is null.
+        long? lastNavTs = null;
         string? lastNavUrl = null;
 
         // The step an option click just added, and only that one. A select's change event has to
@@ -39,7 +41,7 @@ public static partial class RecordingBuilder
             switch (evt.Kind)
             {
                 case "navigate":
-                    if (evt.Url == lastNavUrl && evt.Ts - lastNavTs <= NavigateDedupeMs) break;
+                    if (lastNavTs is { } prevTs && evt.Url == lastNavUrl && evt.Ts - prevTs <= NavigateDedupeMs) break;
                     lastNavUrl = evt.Url;
                     lastNavTs = evt.Ts;
                     steps.Add(new RecordedStep

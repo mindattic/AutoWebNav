@@ -66,25 +66,38 @@ public sealed class RecorderSession(CoreWebView2 core)
     /// going through the rest of <see cref="RecorderSession"/>.</summary>
     public static RecorderEvent? TryParseEvent(string webMessageAsJson)
     {
-        JsonNode? msg;
-        try { msg = JsonNode.Parse(webMessageAsJson); }
+        JsonNode? node;
+        try { node = JsonNode.Parse(webMessageAsJson); }
         catch (JsonException) { return null; }
-        // Only the injected recorder's own envelope is trusted; anything else a page posts is noise.
-        if (msg?["source"]?.GetValue<string>() != "automata-recorder") return null;
-        // Harvest-picking messages ride the same channel but aren't a recorded step.
-        if (msg["kind"]?.GetValue<string>() == "pick") return null;
+        // Anything a page posts arrives here — a bare string, an array, an object whose fields have
+        // the wrong types. Indexing a non-object or reading a value as the wrong type throws, and
+        // this runs inside a WebMessageReceived handler, so it must answer "not ours" instead.
+        if (node is not JsonObject msg) return null;
 
-        var evt = new RecorderEvent
+        RecorderEvent evt;
+        try
         {
-            Kind = msg["kind"]?.GetValue<string>() ?? "",
-            TargetKind = msg["targetKind"]?.GetValue<string>(),
-            Value = msg["value"]?.GetValue<string>(),
-            Checked = msg["checked"]?.GetValue<bool?>(),
-            SelectedText = msg["selectedText"]?.GetValue<string>(),
-            Masked = msg["masked"]?.GetValue<bool>() ?? false,
-            Url = msg["url"]?.GetValue<string>(),
-            Ts = msg["ts"]?.GetValue<long?>() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-        };
+            // Only the injected recorder's own envelope is trusted; anything else a page posts is noise.
+            if (msg["source"]?.GetValue<string>() != "automata-recorder") return null;
+            // Harvest-picking messages ride the same channel but aren't a recorded step.
+            if (msg["kind"]?.GetValue<string>() == "pick") return null;
+
+            evt = new RecorderEvent
+            {
+                Kind = msg["kind"]?.GetValue<string>() ?? "",
+                TargetKind = msg["targetKind"]?.GetValue<string>(),
+                Value = msg["value"]?.GetValue<string>(),
+                Checked = msg["checked"]?.GetValue<bool?>(),
+                SelectedText = msg["selectedText"]?.GetValue<string>(),
+                Masked = msg["masked"]?.GetValue<bool>() ?? false,
+                Url = msg["url"]?.GetValue<string>(),
+                Ts = msg["ts"]?.GetValue<long?>() ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            };
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            return null;
+        }
         if (msg["fingerprint"] is JsonObject fp)
         {
             try { evt.Fingerprint = JsonSerializer.Deserialize<ElementFingerprint>(fp.ToJsonString(), WebNavJson.Options); }

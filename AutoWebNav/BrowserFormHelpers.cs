@@ -84,7 +84,7 @@ public static class BrowserFormHelpers
             var r = el.getBoundingClientRect();
             return r.width > 0 && r.height > 0;
         }
-        var processingWords = /{{processingWordsPattern}}/i;
+        var processingWords = new RegExp({{JsonSerializer.Serialize(processingWordsPattern)}}, 'i');
         var processingEls = Array.from(document.querySelectorAll(
             '[class*="status"], [class*="progress"], [class*="spinner"], [class*="loading"], [class*="processing"], [class*="preparing"], [role="dialog"]'
         )).filter(isVisible)
