@@ -25,7 +25,9 @@ public static class PageDeclutter
     {
         var list = selectors.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
         if (list.Count == 0) return "";
-        var css = string.Join(",\n", list) + " { display: none !important; }";
+        // One rule per selector: a stylesheet parser drops only the rule whose selector it can't
+        // parse, whereas a combined selector list is dropped whole by a single bad entry.
+        var css = string.Join("\n", list.Select(s => s + " { display: none !important; }"));
         return $$"""
             (function () {
               if (window.__autowebnavDeclutter) return;
