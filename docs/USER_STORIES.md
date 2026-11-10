@@ -42,3 +42,7 @@ _Nothing recorded yet._
 | AWN-T19 | 2026-10-31 | feature | closed | Off-screen WebView2 lanes open no CDP port and never register with LiveObservation, so external tools (awn-observe.mjs, rea's CDP-based browser tools, Playwright connectOverCDP) can't attach to an already-running off-screen lane the way they already can for on-screen host panes | 69e89d9 (duplicate of AWN-T20, which an automated commit landed first) |
 | AWN-T20 | 2026-10-31 | chore | closed | Update LiveObservation.cs, OffscreenWebView2Factory.cs, README.md, USER_STORIES.md | — |
 | AWN-T21 | 2026-10-31 | docs | closed | Update USER_STORIES.md | — |
+| AWN-T22 | 2026-11-02 | docs | open | Adopt MindAttic.Agency docs-site pipeline, publish README to GitHub Pages (HOUSE-LAW-14) | — |
+| AWN-T23 | 2026-11-02 | fix | closed | Bughunt sweep, two passes: find and fix real bugs across tracked source (user request 2026-11-02) | — |
+| AWN-T24 | 2026-11-02 | fix | closed | Fix the open items the 2026-11-02 bughunt left for decision (PageDeclutter one CSS rule per selector) | — |
+| AWN-T25 | 2026-11-10 | chore | closed | Crash recovery: commit the command-catalog sync (.agent/commands/*.md) and regenerated docs/USER_STORIES.md left uncommitted by the session crash | — |
